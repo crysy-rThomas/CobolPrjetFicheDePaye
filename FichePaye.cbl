@@ -117,6 +117,7 @@
            ELSE IF WS-choix = 1 THEN
                DISPLAY CLEAR-SCREEN
                DISPLAY aff-fiche
+               MOVE 0 TO BOOL
            ELSE IF WS-choix = 2 THEN
                DISPLAY 'ERROR'
            ELSE
