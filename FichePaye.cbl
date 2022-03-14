@@ -12,23 +12,31 @@
        CONFIGURATION SECTION.
       *-----------------------
        INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT clientFile
+               ASSIGN TO "client.txt" ORGANIZATION IS LINE SEQUENTIAL.
       *-----------------------
        DATA DIVISION.
+       FILE SECTION.
+       FD clientFile.
+      *CLIENT
+       01 WS-client.
+           02 clientId PIC 999.
+           02 nom PIC X(15).
+           02 prenom PIC X(15).
+           02 adresse.
+               03 rue PIC X(20).
+               03 codePostal PIC 9(5).
+               03 ville PIC X(15).
+       01 produitFinancier.
+               02 intitule PIC X(50).
+               02 somme PIC $*****,999.
+               02 dateCreation PIC 99/99/9999.
+       88 EndOfClientFile VALUE HIGH-VALUE.
       *-----------------------
        WORKING-STORAGE SECTION.
 
-      *CLIENT
-       01 WS-client.
-           02 WS-nom PIC X(15).
-           02 WS-prenom PIC X(15).
-           02 WS-adresse.
-               03 WS-rue PIC X(20).
-               03 WS-codePostal PIC 9(5).
-               03 WS-ville PIC X(15).
-           02 WS-produitFinancier.
-               03 WS-intitule PIC X(50).
-               03 WS-somme PIC $***,999.
-               03 WS-dateCreation PIC 99/99/9999.
+
       *-----------------------
       *
       *
@@ -78,32 +86,35 @@
        SCREEN SECTION.
        01 CLEAR-SCREEN BLANK SCREEN.
        01 s-Client.
+           02 ss-clientID.
+               03 LINE 3 COL 8 VALUE 'Num CLient :'.
+               03 s-clientId PIC x(15) TO clientId REQUIRED.
            02 ss-nom.
                03 LINE 6 COL 8 VALUE 'Nom :'.
-               03 s-nom PIC x(15) TO WS-nom REQUIRED.
+               03 s-nom PIC x(15) TO nom REQUIRED.
            02 ss-prenom.
                03 LINE 7 COL 8 VALUE'Prenom :'.
-               03 s-prenom PIC X(15) TO WS-prenom REQUIRED.
+               03 s-prenom PIC X(15) TO prenom REQUIRED.
        01 s-Adresse.
            02 ss-rue.
                03 LINE 10 COL 8 VALUE 'Rue :'.
-               03 s-rue PIC X(20) TO WS-rue REQUIRED.
+               03 s-rue PIC X(20) TO rue REQUIRED.
            02 ss-codePostal.
                03 LINE 11 COL 8 VALUE 'Code Postal :'.
-               03 s-codePostal PIC X(5) TO WS-codePostal REQUIRED.
+               03 s-codePostal PIC X(5) TO codePostal REQUIRED.
            02 ss-ville.
                03 LINE 12 COL 8 VALUE'Ville :'.
-               03 s-ville PIC X(15) TO WS-ville REQUIRED.
+               03 s-ville PIC X(15) TO ville REQUIRED.
        01 s-ProduitFinancier.
            02 ss-intitule.
                03 LINE 15 COL 8 VALUE 'Intitule :'.
-               03 s-intiutle PIC X(50) TO WS-intitule REQUIRED.
+               03 s-intiutle PIC X(50) TO intitule REQUIRED.
            02 ss-somme.
-               03 LINE 16 COL 8 VALUE 'Somme :'.
-               03 s-somme PIC $***,99 TO WS-somme REQUIRED.
+               03 LINE 16 COL 8 VALUE 'Somme (Format 0,00):'.
+               03 s-somme PIC $*****,99 TO somme REQUIRED.
            02 ss-DateCrea.
                03 LINE 17 COL 8 VALUE 'Date de creation :'.
-               03 s-dateCrea PIC 99/99/9999 TO WS-dateCreation REQUIRED.
+               03 s-dateCrea PIC 99/99/9999 TO dateCreation REQUIRED.
        01 ss-choix.
            02 LINE 2 COL 8 VALUE 'FAITE VOTRE CHOIX'.
            02 LINE 3 COL 8 VALUE '- (0) Creation de CLIENT'.
@@ -114,17 +125,19 @@
            02 s-choix PIC 9 TO WS-choix REQUIRED.
 
        01  aff-fiche.
+           02 LINE 2 COL 8 VALUE '-- Num Client --'.
+           02 LINE 3 COL 8 PIC 999 FROM clientId REQUIRED.
            02 LINE 5 COL 8 VALUE '-- CLIENT -- '.
-           02 LINE 6 COL 8 PIC x(15) FROM WS-nom REQUIRED.
-           02 LINE 7 COL 8 PIC x(15) FROM WS-prenom REQUIRED.
+           02 LINE 6 COL 8 PIC x(15) FROM nom REQUIRED.
+           02 LINE 7 COL 8 PIC x(15) FROM prenom REQUIRED.
            02 LINE 9 COL 8 VALUE '-- ADRESSE -- '.
-           02 LINE 10 COL 8 PIC X(20) FROM WS-rue REQUIRED.
-           02 LINE 11 COL 8 PIC X(5) FROM WS-codePostal.
-           02 LINE 12 COL 8 PIC X(15) FROM WS-ville.
+           02 LINE 10 COL 8 PIC X(20) FROM rue REQUIRED.
+           02 LINE 11 COL 8 PIC X(5) FROM codePostal.
+           02 LINE 12 COL 8 PIC X(15) FROM ville.
            02 LINE 14 COL 8 VALUE'-- PRODUIT FINANCIER --'.
-           02 LINE 15 COL 8 PIC X(50) FROM WS-intitule.
-           02 LINE 16 COL 8 PIC $***,99 FROM WS-somme.
-           02 LINE 17 COL 8 PIC 99/99/9999 FROM WS-dateCreation.
+           02 LINE 15 COL 8 PIC X(50) FROM intitule.
+           02 LINE 16 COL 8 PIC $*****,99 FROM somme.
+           02 LINE 17 COL 8 PIC 99/99/9999 FROM dateCreation.
 
 
 
@@ -141,20 +154,30 @@
            if WS-choix = 0 THEN
                DISPLAY CLEAR-SCREEN
       *    CREATION D'UN CLIENT + ADRESSE + FINANCE
-               ACCEPT ss-nom
-               ACCEPT ss-prenom
-               ACCEPT ss-rue
-               ACCEPT ss-codePostal
-               ACCEPT ss-ville
-               ACCEPT ss-intitule
-               ACCEPT ss-somme
-               ACCEPT ss-dateCrea
+               OPEN EXTEND clientFile
+
+               PERFORM GetClientDetail
+                   Write WS-client
+                  CLOSE clientFile
+
            ELSE IF WS-choix = 1 THEN
+
                DISPLAY CLEAR-SCREEN
-               DISPLAY aff-fiche
-               MOVE 0 TO BOOL
+
            ELSE IF WS-choix = 2 THEN
-               DISPLAY 'ERROR'
+               DISPLAY CLEAR-SCREEN
+           OPEN INPUT clientFile
+               READ clientFile
+                       AT END SET EndOfClientFile TO TRUE
+               END-READ
+           PERFORM UNTIL EndOfClientFile
+               DISPLAY clientId SPACE nom SPACE prenom
+               READ clientFile
+                       AT END SET EndOfClientFile TO TRUE
+               END-READ
+           END-PERFORM
+           CLOSE clientFile
+
            ELSE
                DISPLAY CLEAR-SCREEN
                DISPLAY 'EXIT'
@@ -163,6 +186,15 @@
        END-PERFORM.
 
            STOP RUN.
-
+       GetClientDetail.
+           ACCEPT ss-clientID
+           ACCEPT ss-nom
+           ACCEPT ss-prenom
+           ACCEPT ss-rue
+           ACCEPT ss-codePostal
+           ACCEPT ss-ville
+           ACCEPT ss-intitule
+           ACCEPT ss-somme
+           ACCEPT ss-dateCrea.
       ** add other procedures here
        END PROGRAM YOUR-PROGRAM-NAME.
