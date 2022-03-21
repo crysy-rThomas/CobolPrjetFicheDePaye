@@ -14,28 +14,44 @@
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
            SELECT clientFile
-               ASSIGN TO "client.txt" ORGANIZATION IS LINE SEQUENTIAL.
+               ASSIGN TO "client.txt" ORGANIZATION IS LINE SEQUENTIAL .
       *-----------------------
        DATA DIVISION.
        FILE SECTION.
        FD clientFile.
       *CLIENT
-       01 WS-client.
-           02 clientId PIC 999.
-           02 nom PIC X(15).
-           02 prenom PIC X(15).
-           02 adresse.
-               03 rue PIC X(20).
-               03 codePostal PIC 9(5).
-               03 ville PIC X(15).
-       01 produitFinancier.
-               02 intitule PIC X(50).
-               02 somme PIC $*****,999.
-               02 dateCreation PIC 99/99/9999.
-       88 EndOfClientFile VALUE HIGH-VALUE.
+       01 f-client.
+           02 f-infoClient.
+               03 f-clientId PIC 9(5).
+               03 f-nom PIC X(15).
+               03 f-prenom PIC X(15).
+               03 f-adresse.
+                   04 f-rue PIC X(20).
+                   04 f-codePostal PIC 9(5).
+                   04 f-ville PIC X(15).
+           02 f-produitFinancier.
+               03 f-intitule PIC X(50).
+               03 f-somme PIC $*****,999.
+               03 f-dateCreation PIC 99/99/9999.
       *-----------------------
        WORKING-STORAGE SECTION.
+      *CLIENT
+       01 WS-client.
+           02 infoClient.
+               03 clientId PIC 9(5).
+               03 nom PIC X(15).
+               03 prenom PIC X(15).
+               03 adresse.
+                   04 rue PIC X(20).
+                   04 codePostal PIC 9(5).
+                   04 ville PIC X(15).
+           02 produitFinancier.
+               03 intitule PIC X(50).
+               03 somme PIC $*****V999.
+               03 dateCreation PIC 99/99/9999.
 
+       01 End-Of-File PIC X.
+           88 EOF VALUE "Y".
 
       *-----------------------
       *
@@ -81,6 +97,7 @@
       *     ######################################################################################
       *CHOIX MAIN
        01 WS-choix PIC 9.
+       01 nbLine PIC 99 VALUE 1.
        01 BOOL PIC 9 VALUE 1.
 
        SCREEN SECTION.
@@ -88,7 +105,7 @@
        01 s-Client.
            02 ss-clientID.
                03 LINE 3 COL 8 VALUE 'Num CLient :'.
-               03 s-clientId PIC x(15) TO clientId REQUIRED.
+               03 s-clientId PIC 9(5) TO clientId REQUIRED.
            02 ss-nom.
                03 LINE 6 COL 8 VALUE 'Nom :'.
                03 s-nom PIC x(15) TO nom REQUIRED.
@@ -111,7 +128,7 @@
                03 s-intiutle PIC X(50) TO intitule REQUIRED.
            02 ss-somme.
                03 LINE 16 COL 8 VALUE 'Somme (Format 0,00):'.
-               03 s-somme PIC $*****,99 TO somme REQUIRED.
+               03 s-somme PIC $*****V99 TO somme REQUIRED.
            02 ss-DateCrea.
                03 LINE 17 COL 8 VALUE 'Date de creation :'.
                03 s-dateCrea PIC 99/99/9999 TO dateCreation REQUIRED.
@@ -126,7 +143,7 @@
 
        01  aff-fiche.
            02 LINE 2 COL 8 VALUE '-- Num Client --'.
-           02 LINE 3 COL 8 PIC 999 FROM clientId REQUIRED.
+           02 LINE 3 COL 8 PIC 99999 FROM clientId REQUIRED.
            02 LINE 5 COL 8 VALUE '-- CLIENT -- '.
            02 LINE 6 COL 8 PIC x(15) FROM nom REQUIRED.
            02 LINE 7 COL 8 PIC x(15) FROM prenom REQUIRED.
@@ -136,10 +153,12 @@
            02 LINE 12 COL 8 PIC X(15) FROM ville.
            02 LINE 14 COL 8 VALUE'-- PRODUIT FINANCIER --'.
            02 LINE 15 COL 8 PIC X(50) FROM intitule.
-           02 LINE 16 COL 8 PIC $*****,99 FROM somme.
+           02 LINE 16 COL 8 PIC $*****V99 FROM somme.
            02 LINE 17 COL 8 PIC 99/99/9999 FROM dateCreation.
 
-
+       01 aff-list-client.
+           01 LINE 0 COL 0 VALUE "----------------".
+           01 LINE nbLine COL 1 FROM f-clientId.
 
 
 
@@ -157,35 +176,33 @@
                OPEN EXTEND clientFile
 
                PERFORM GetClientDetail
-                   Write WS-client
-                  CLOSE clientFile
+                       Write f-client
+               CLOSE clientFile
 
            ELSE IF WS-choix = 1 THEN
-
                DISPLAY CLEAR-SCREEN
+               PERFORM ClientAff
+
 
            ELSE IF WS-choix = 2 THEN
-               DISPLAY CLEAR-SCREEN
-           OPEN INPUT clientFile
-               READ clientFile
-                       AT END SET EndOfClientFile TO TRUE
-               END-READ
-           PERFORM UNTIL EndOfClientFile
-               DISPLAY clientId SPACE nom SPACE prenom
-               READ clientFile
-                       AT END SET EndOfClientFile TO TRUE
-               END-READ
-           END-PERFORM
-           CLOSE clientFile
+           DISPLAY CLEAR-SCREEN
+
+           PERFORM ListAff
+
+           MOVE 0 TO BOOL
 
            ELSE
-               DISPLAY CLEAR-SCREEN
-               DISPLAY 'EXIT'
-               MOVE 0 TO BOOL
+             DISPLAY CLEAR-SCREEN
+             DISPLAY 'EXIT'
+             MOVE 0 TO BOOL
            END-IF
        END-PERFORM.
 
            STOP RUN.
+
+
+
+      ** add other procedures here
        GetClientDetail.
            ACCEPT ss-clientID
            ACCEPT ss-nom
@@ -196,5 +213,33 @@
            ACCEPT ss-intitule
            ACCEPT ss-somme
            ACCEPT ss-dateCrea.
-      ** add other procedures here
+       ListAff.
+           OPEN INPUT clientFile
+               READ clientFile AT END SET EOF TO TRUE
+               END-READ
+           PERFORM UNTIL EOF
+               DISPLAY aff-list-client
+               ADD 1 TO nbLine
+               READ clientFile into WS-client
+               AT END SET EOF TO TRUE
+               END-READ
+           END-PERFORM
+               CLOSE clientFile.
+       ClientAff.
+           ACCEPT ss-clientID
+           OPEN INPUT clientFile
+               READ clientFile AT END SET EOF TO TRUE
+               END-READ
+           PERFORM UNTIL EOF
+               IF clientId = f-clientId THEN
+                   DISPLAY aff-fiche
+
+               ELSE
+                   READ clientFile into WS-client
+                   AT END SET EOF TO TRUE
+               END-READ
+               END-IF
+           END-PERFORM
+               CLOSE clientFile.
+
        END PROGRAM YOUR-PROGRAM-NAME.
