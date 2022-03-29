@@ -156,9 +156,6 @@
            02 LINE 16 COL 8 PIC $*****V99 FROM somme.
            02 LINE 17 COL 8 PIC 99/99/9999 FROM dateCreation.
 
-       01 aff-list-client.
-           01 LINE 0 COL 0 VALUE "----------------".
-           01 LINE nbLine COL 1 FROM f-clientId.
 
 
 
@@ -176,19 +173,19 @@
                OPEN EXTEND clientFile
 
                PERFORM GetClientDetail
+                       MOVE WS-client to f-client
                        Write f-client
+
                CLOSE clientFile
 
            ELSE IF WS-choix = 1 THEN
                DISPLAY CLEAR-SCREEN
                PERFORM ClientAff
-
+               MOVE 0 TO BOOL
 
            ELSE IF WS-choix = 2 THEN
            DISPLAY CLEAR-SCREEN
-
            PERFORM ListAff
-
            MOVE 0 TO BOOL
 
            ELSE
@@ -199,6 +196,11 @@
        END-PERFORM.
 
            STOP RUN.
+
+
+
+
+
 
 
 
@@ -213,31 +215,37 @@
            ACCEPT ss-intitule
            ACCEPT ss-somme
            ACCEPT ss-dateCrea.
+
+
        ListAff.
            OPEN INPUT clientFile
-               READ clientFile AT END SET EOF TO TRUE
+              READ clientFile AT END SET EOF TO TRUE
                END-READ
            PERFORM UNTIL EOF
-               DISPLAY aff-list-client
-               ADD 1 TO nbLine
-               READ clientFile into WS-client
-               AT END SET EOF TO TRUE
+               READ clientFile NEXT RECORD INTO f-client
+                  AT END SET EOF TO TRUE
+               END-READ
+                   MOVE f-client TO WS-client
+                   DISPLAY clientId SPACE nom SPACE prenom SPACE ville
+               READ clientFile AT END SET EOF TO TRUE
                END-READ
            END-PERFORM
                CLOSE clientFile.
+
+
+
        ClientAff.
            ACCEPT ss-clientID
            OPEN INPUT clientFile
-               READ clientFile AT END SET EOF TO TRUE
-               END-READ
-           PERFORM UNTIL EOF
-               IF clientId = f-clientId THEN
-                   DISPLAY aff-fiche
 
-               ELSE
-                   READ clientFile into WS-client
-                   AT END SET EOF TO TRUE
+           PERFORM UNTIL EOF
+               READ clientFile NEXT RECORD INTO f-client
+                  AT END SET EOF TO TRUE
                END-READ
+               IF clientId = f-clientId THEN
+                   MOVE f-client TO WS-client
+                   DISPLAY CLEAR-SCREEN
+                   DISPLAY aff-fiche
                END-IF
            END-PERFORM
                CLOSE clientFile.
